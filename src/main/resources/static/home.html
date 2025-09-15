@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h2>Welcome to the Hotel Management System</h2>
+<div id="userInfo"></div>
+<nav>
+    <nav id="navbar">
+        <!-- Dynamic links will be added here -->
+    </nav>
+</nav>
+
+<script>
+    const user = JSON.parse(localStorage.getItem("user"));
+    //console.log('Retrieved user from localStorage:', user);
+    if (!user) {
+        window.location.href = "login.html";
+    } else {
+        buildNavbar();
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+
+    function buildNavbar() {
+        const navbar = document.getElementById("navbar");
+        let links = '';
+
+        if (user.role === "CUSTOMER") {
+            links += `<a href="browse-menu.html">Browse Menu</a> | <a href="orders.html">My Orders</a>`;
+        } else if (user.role === "MANAGER") {
+            links += `<a href="assign-chef.html">Assign Chef</a>`;
+        } else if (user.role === "CHEF") {
+            links += `<a href="chef-dashboard.html">Chef Dashboard</a>`;
+        }
+        links += ` | <a href="#" >Logged in as: ${user.username}</a>`;
+        links += ` | <a href="#" onclick="logout()">Logout</a>`;
+
+        navbar.innerHTML = links;
+    }
+</script>
+
+</body>
+</html>

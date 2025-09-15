@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Orders</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <h2>My Orders</h2>
+  <nav>
+    <nav id="navbar">
+      <!-- Dynamic links will be added here -->
+    </nav>
+  </nav>
+</header>
+
+<section id="orders-container">
+    <p>Loading your orders...</p>
+</section>
+
+<script>
+
+const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!user) {
+        window.location.href = "login.html";
+        }else {
+        buildNavbar();
+    }
+
+        function buildNavbar() {
+        const navbar = document.getElementById("navbar");
+        let links = '';
+
+        if (user.role === "CUSTOMER") {
+            links += `<a href="browse-menu.html">Browse Menu</a> | <a href="orders.html">My Orders</a>`;
+        } else if (user.role === "MANAGER") {
+            links += `<a href="assign-chef.html">Assign Chef</a>`;
+        } else if (user.role === "CHEF") {
+            links += `<a href="chef-dashboard.html">Chef Dashboard</a>`;
+        }
+        links += ` | <a href="#" >Logged in as: ${user.username}</a>`;
+        links += ` | <a href="#" onclick="logout()">Logout</a>`;
+
+        navbar.innerHTML = links;
+    }
+
+  function logout() {
+    localStorage.clear();
+    window.location.href = "login.html";
+  }
+
+  async function loadOrders() {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || !user.id) {
+      alert("Please login first.");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const response = await fetch(`/api/orders/customer/${user.id}`);
+    const orders = await response.json();
+
+    const container = document.getElementById("orders-container");
+    container.innerHTML = "";
+
+    if (orders.length === 0) {
+      container.innerHTML = "<p>You haven't placed any orders yet.</p>";
+      return;
+    }
+
+    orders.forEach(order => {
+      const card = document.createElement("div");
+      card.className = "order-card";
+
+      const statusColor = {
+        PENDING: "gray",
+        IN_PROGRESS: "orange",
+        READY: "green",
+        COMPLETED: "blue",
+        CANCELLED: "red"
+      }[order.status] || "black";
+
+      const itemsHtml = (order.items || []).map(item => `
+        <li>${item.name} x ${item.quantity} ${item.specialNotes ? `(Note: ${item.specialNotes})` : ""}</li>
+      `).join("");
+
+      card.innerHTML = `
+        <h3>Order #${order.id}</h3>
+        <p><strong>Status:</strong> <span style="color: ${statusColor};">${order.status}</span></p>
+        <p><strong>Created:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
+        <p><strong>Updated:</strong> ${new Date(order.updatedAt).toLocaleString()}</p>
+        <div><strong>Items:</strong></div>
+        <ul>${itemsHtml}</ul>
+        <p><strong>Total Amount:</strong> $${order.totalAmount.toFixed(2)}</p>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  loadOrders();
+
+</script>
+
+<style>
+  .order-card {
+    background: #fff;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 600px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+
+  ul {
+    margin-top: 10px;
+    padding-left: 20px;
+  }
+  .order-items {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 10px;
+}
+
+.order-items li {
+  background: #f9f9f9;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  border-left: 5px solid #007BFF;
+  border-radius: 4px;
+  font-family: 'Segoe UI', sans-serif;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-items li::before {
+  content: "🍽️";
+  margin-right: 10px;
+}
+
+
+</style>
+
+</body>
+</html>
