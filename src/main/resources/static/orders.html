@@ -4,146 +4,236 @@
     <meta charset="UTF-8">
     <title>My Orders</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <script src="bootstrap.bundle.min.js"></script>
+
+    <style>
+        .order-item {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        .price-line {
+            font-size: 0.9rem;
+            color: #444;
+        }
+    </style>
 </head>
 <body>
 
-<header>
-    <h2>My Orders</h2>
-  <nav>
-    <nav id="navbar">
-      <!-- Dynamic links will be added here -->
-    </nav>
-  </nav>
-</header>
+<div class="sidebar">
+    <h4>Hotel System</h4>
+    <div id="role-menu"></div>
+    <a href="#">Logged in as: <span id="usernameLabel"></span></a>
+    <a href="#" onclick="logout()">Logout</a>
+</div>
 
-<section id="orders-container">
+<div class="main-content" id="main-content">
     <p>Loading your orders...</p>
-</section>
+</div>
+
+<div class="modal fade" id="trackingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Pickup Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body" id="trackingContent">
+                Loading...
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
 
 const user = JSON.parse(localStorage.getItem("user"));
+if (!user) {
+    window.location.href = "login.html";
+} else {
+    buildSidebar();
+    document.getElementById("usernameLabel").textContent = `${user.username}`;
+}
 
-    if (!user) {
-        window.location.href = "login.html";
-        }else {
-        buildNavbar();
+function buildSidebar() {
+    const sidebar = document.getElementById("role-menu");
+    let links = "";
+    if (user.role === "CUSTOMER") {
+        links += `<a href="browse-menu.html">Browse Menu</a>`;
+        links += `<a class="active" href="orders.html">My Orders</a>`;
+    } else if (user.role === "MANAGER") {
+        links += `<a href="assign-chef.html">Assign Chef</a>`;
+    } else if (user.role === "CHEF") {
+        links += `<a href="chef-dashboard.html">Chef Dashboard</a>`;
     }
+    sidebar.innerHTML = links;
+}
 
-        function buildNavbar() {
-        const navbar = document.getElementById("navbar");
-        let links = '';
-
-        if (user.role === "CUSTOMER") {
-            links += `<a href="browse-menu.html">Browse Menu</a> | <a href="orders.html">My Orders</a>`;
-        } else if (user.role === "MANAGER") {
-            links += `<a href="assign-chef.html">Assign Chef</a>`;
-        } else if (user.role === "CHEF") {
-            links += `<a href="chef-dashboard.html">Chef Dashboard</a>`;
-        }
-        links += ` | <a href="#" >Logged in as: ${user.username}</a>`;
-        links += ` | <a href="#" onclick="logout()">Logout</a>`;
-
-        navbar.innerHTML = links;
-    }
-
-  function logout() {
+function logout() {
     localStorage.clear();
     window.location.href = "login.html";
-  }
+}
 
-  async function loadOrders() {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !user.id) {
-      alert("Please login first.");
-      window.location.href = "login.html";
-      return;
-    }
-
+async function loadOrders() {
     const response = await fetch(`/api/orders/customer/${user.id}`);
     const orders = await response.json();
 
-    const container = document.getElementById("orders-container");
+    const container = document.getElementById("main-content");
     container.innerHTML = "";
 
     if (orders.length === 0) {
-      container.innerHTML = "<p>You haven't placed any orders yet.</p>";
-      return;
+        container.innerHTML = `<p class="text-muted">You haven't placed any orders yet.</p>`;
+        return;
     }
 
     orders.forEach(order => {
-      const card = document.createElement("div");
-      card.className = "order-card";
 
-      const statusColor = {
-        PENDING: "gray",
-        IN_PROGRESS: "orange",
-        READY: "green",
-        COMPLETED: "blue",
-        CANCELLED: "red"
-      }[order.status] || "black";
+    const statusColor = {
+        PENDING: "secondary",
+        IN_PROGRESS: "warning",
+        READY: "success",
+        COMPLETED: "primary",
+        CANCELLED: "danger"
+    }[order.status] || "dark";
 
-      const itemsHtml = (order.items || []).map(item => `
-        <li>${item.name} x ${item.quantity} ${item.specialNotes ? `(Note: ${item.specialNotes})` : ""}</li>
-      `).join("");
+    const itemsHtml = (order.items || [])
+        .map(item => `
+            <div class="order-item d-flex align-items-center mb-2">
+                <img src="${item.imageUrl || 'images/placeholder.png'}"
+                     style="width:50px;height:50px;object-fit:cover;margin-right:10px;border-radius:5px;">
 
-      card.innerHTML = `
-        <h3>Order #${order.id}</h3>
-        <p><strong>Status:</strong> <span style="color: ${statusColor};">${order.status}</span></p>
-        <p><strong>Created:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
-        <p><strong>Updated:</strong> ${new Date(order.updatedAt).toLocaleString()}</p>
-        <div><strong>Items:</strong></div>
-        <ul>${itemsHtml}</ul>
-        <p><strong>Total Amount:</strong> $${order.totalAmount.toFixed(2)}</p>
-      `;
+                <div>
+                    <strong>${item.name}</strong> × ${item.quantity}
+                    <div class="price-line">Unit Price: $${item.price.toFixed(2)}</div>
+                </div>
+            </div>
+        `).join("");
 
-      container.appendChild(card);
-    });
-  }
+    let cancelButton = "";
+    if (order.status === "OPEN") {
+        cancelButton = `<button class="btn btn-danger mt-2" onclick="cancelOrder(${order.id})">Cancel Order</button>`;
+    }
 
-  loadOrders();
+    let trackingButton = "";
+    if (order.status === "READY") {
+        trackingButton = `
+            <button class="btn btn-success mt-2" onclick="openTracking(${order.id})">
+                Pickup Location
+            </button>`;
+    }
 
+    const card = document.createElement("div");
+    card.className = "card mb-3";
+
+    card.innerHTML = `
+        <div class="card-body">
+            <h5 class="card-title">Order #${order.id}</h5>
+
+            <p><strong>Status:</strong>
+                <span class="badge bg-${statusColor}">${order.status}</span>
+            </p>
+
+            <h6 class="mt-3"><u>Items:</u></h6>
+            <div class="mt-2">${itemsHtml}</div>
+
+            <hr>
+            <button class="btn btn-info mt-2" onclick="printOrder(${order.id})">Print Order</button>
+            ${cancelButton}
+            ${trackingButton}
+        </div>
+    `;
+
+    container.appendChild(card);
+});
+
+}
+
+function openTracking(orderId) {
+    const modal = new bootstrap.Modal(document.getElementById("trackingModal"));
+    modal.show();
+
+    document.getElementById("trackingContent").innerHTML = `
+        <h5>Order #${orderId} is ready for pickup!</h5>
+
+        <div class="mt-3">
+            <strong>Pickup Location:</strong><br>
+            ABC Restaurant<br>
+            John Road, IL, USA<br><br>
+
+            <img src="images/fake-map.png"
+                 alt="Map"
+                 style="width:100%;border-radius:10px;">
+        </div>
+
+        <p class="mt-3 text-muted">
+            Please show this screen when collecting your order.
+        </p>
+    `;
+}
+
+
+function cleanDate(str) {
+    return str.replace(/(\.000)?\+00:00$/, "");
+}
+
+function printOrder(orderId) {
+    const card = Array.from(document.querySelectorAll('.card')).find(c =>
+        c.querySelector('.card-title').textContent.includes(`#${orderId}`)
+    );
+
+    if (!card) return alert("Order not found!");
+
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Order #${orderId} Report</title>
+            <link rel="stylesheet" href="bootstrap.min.css">
+            <style>
+                body { padding: 20px; font-family: Arial, sans-serif; }
+                .order-item { border-bottom: 1px solid #eee; padding: 8px 0; }
+                .price-line { font-size: 0.9rem; color: #444; }
+            </style>
+        </head>
+        <body>
+            <h3>Order #${orderId} Report</h3>
+            ${card.innerHTML}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+}
+
+async function cancelOrder(orderId) {
+    if (!confirm("Are you sure you want to cancel this order?")) return;
+
+    try {
+        const response = await fetch(`/api/orders/cancel/${orderId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+
+        const result = await response.json();
+
+        if (response.status === 200) {
+            alert(result.message);
+            loadOrders();
+        } else {
+            alert(result.message || "Failed to cancel order.");
+        }
+    } catch (error) {
+        console.error("Error cancelling order:", error);
+        alert("An error occurred while cancelling the order. Please try again.");
+    }
+}
+
+loadOrders();
 </script>
-
-<style>
-  .order-card {
-    background: #fff;
-    margin: 20px auto;
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 600px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-
-  ul {
-    margin-top: 10px;
-    padding-left: 20px;
-  }
-  .order-items {
-  list-style: none;
-  padding-left: 0;
-  margin-top: 10px;
-}
-
-.order-items li {
-  background: #f9f9f9;
-  margin-bottom: 8px;
-  padding: 10px 14px;
-  border-left: 5px solid #007BFF;
-  border-radius: 4px;
-  font-family: 'Segoe UI', sans-serif;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.order-items li::before {
-  content: "🍽️";
-  margin-right: 10px;
-}
-
-
-</style>
 
 </body>
 </html>

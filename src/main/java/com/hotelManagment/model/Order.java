@@ -15,4 +15,7 @@ public class Order {
     private Timestamp updatedAt;
     private List<OrderItem> items;
     private double totalAmount;
+    private double subTotal;
+    private double taxAmount;
+
 }

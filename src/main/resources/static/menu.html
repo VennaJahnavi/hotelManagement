@@ -3,61 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>Hotel Management System</title>
+    <script src="bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="style.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f2f2f2;
-            padding: 20px;
-            text-align: center;
-        }
-
-        header {
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-
-        nav a {
-            margin: 0 15px;
-            text-decoration: none;
-            color: #dddddd;
-        }
-
-        nav a:hover {
-            text-decoration: underline;
-        }
-
-        section {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            max-width: 800px;
-            margin: 0 auto;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        h3 {
-            color: #333;
-        }
-
-    </style>
+    <link rel="stylesheet" href="bootstrap.min.css">
 </head>
 <body>
 
-<header>
-    <h2>Welcome to Hotel Management System</h2>
-    <nav>
-        <a href="register.html">Register</a> |
-        <a href="login.html">Login</a> |
-        <a href="menu.html">Browse Menu</a>
-    </nav>
-</header>
+<div class="sidebar">
+    <h4>Hotel System</h4>
+    <a href="login.html">Login</a>
+    <a href="register.html">Register</a>
+</div>
 
-<section>
-    <h3>Manage Hotel Orders Efficiently</h3>
+<div class="main-content">
+
+    <h1 class="mb-3">Manage Hotel Orders Efficiently</h1>
+
     <p>
         This Hotel Management System helps streamline order processing between customers, chefs, and managers.
         Customers can browse the menu, place orders, and track their status in real time.
@@ -71,7 +32,8 @@
     <p>
         Start by registering as a new user or logging in to access your dashboard.
     </p>
-</section>
+
+</div>
 
 </body>
 </html>

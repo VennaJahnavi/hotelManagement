@@ -11,4 +11,6 @@ public class OrderItem {
     private Integer quantity;
     private String specialNotes;
     private double price;
+    private double lineTotal;
+    private String imageUrl;
 }

@@ -1,197 +1,217 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Browse Menu</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f7f7f7;
-      padding: 20px;
-    }
+    <meta charset="UTF-8">
+    <title>Browse Menu</title>
 
-    header h2 {
-      text-align: center;
-      color: #333;
-    }
-
-    nav {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    nav a {
-      margin: 0 10px;
-      text-decoration: none;
-      color: #333;
-    }
-
-    nav a:hover {
-      text-decoration: underline;
-    }
-
-    #menu-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 20px;
-    }
-
-    .menu-card {
-      background: #fff;
-      flex: 0 0 calc(50% - 40px); /* Two cards per row, accounting for gap */
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      box-sizing: border-box;
-    }
-
-    input[type="number"], input[type="text"] {
-      padding: 5px;
-      margin-top: 5px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      padding: 6px 14px;
-      background-color: #28a745;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #218838;
-    }
-
-    section button {
-      padding: 10px 20px;
-    }
-  </style>
+    <script src="bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="bootstrap.min.css">
 </head>
+
 <body>
 
-<header>
-  <h2>Menu</h2>
-  <nav>
-    <a href="home.html">Home</a> |
-    <a href="browse-menu.html">Browse Menu</a> |
-    <a href="orders.html">My Orders</a> |
-    <span id="user-info" style="margin-left: 15px; color: #555;"></span> |
+<div class="sidebar">
+    <h4>Hotel System</h4>
+
+    <a href="browse-menu.html" class="active">Browse Menu</a>
+    <a href="orders.html">My Orders</a>
+    <a href="#">Logged in as: <span id="usernameLabel"></span></a>
     <a href="#" onclick="logout()">Logout</a>
-  </nav>
-</header>
+</div>
 
-<section id="menu-container">
-  <p>Loading menu items...</p>
-</section>
+<div class="main-content">
+    <h2 class="mb-3">Browse Menu</h2>
+    <div class="controls-bar mb-4 d-flex gap-3">
+        <input id="search" class="search-box" type="text" placeholder="Search menu..." onkeyup="searchMenu()">
 
-<section style="text-align:center; margin-top: 30px;">
-  <button onclick="placeOrder()">Place Order</button>
-</section>
+        <select id="category-filter" class="cat-box" onchange="filterByCategory()">
+            <option value="all">All Categories</option>
+        </select>
+    </div>
 
+    <div class="main-layout">
+        <section id="menu-container" class="menu-grid">
+            <p>Loading menu...</p>
+        </section>
+
+        <aside id="cart-container" class="cart-panel">
+            <h3>Your Cart</h3>
+            <div id="cart-items"><p>Your cart is empty.</p></div>
+            <button class="place-btn" onclick="placeOrder()">Place Order</button>
+        </aside>
+    </div>
+
+    <span id="user-info" class="mt-3 d-block"></span>
+
+</div>
 <script>
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (!user || !user.id) {
-    alert("Please login first.");
-    window.location.href = "login.html";
-  }
-  document.getElementById("user-info").textContent = `Logged in as: ${user.username}`;
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (!user || !user.id) {
+            alert("Please login first.");
+            window.location.href = "login.html";
+        }
+        document.getElementById("usernameLabel").textContent = `${user.username}`;
 
-  const cart = [];
+        const cart = [];
+        let allMenuItems = [];
 
-  function logout() {
-    sessionStorage.clear();
-    window.location.href = "login.html";
-  }
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = "login.html";
+        }
 
-  async function loadMenu() {
-    const response = await fetch("/api/menu");
-    const menuItems = await response.json();
+        async function loadMenu() {
+            const res = await fetch("/api/menu");
+            allMenuItems = await res.json();
+            populateCategoryDropdown(allMenuItems);
+            displayMenuItems(allMenuItems);
+        }
 
+        function populateCategoryDropdown(items) {
+            const dropdown = document.getElementById("category-filter");
+            const cats = [...new Set(items.map(i => i.category))];
+            cats.forEach(cat => {
+                const opt = document.createElement("option");
+                opt.value = cat;
+                opt.innerText = cat;
+                dropdown.appendChild(opt);
+            });
+        }
+
+        function displayMenuItems(items) {
     const container = document.getElementById("menu-container");
     container.innerHTML = "";
 
-    if (menuItems.length === 0) {
-      container.innerHTML = "<p>No menu items found.</p>";
-      return;
+    if (items.length === 0) {
+        container.innerHTML = "<p>No items found.</p>";
+        return;
     }
 
-    menuItems.forEach(item => {
-      const card = document.createElement("div");
-      card.className = "menu-card";
+    items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "menu-card";
 
-      card.innerHTML = `
-        <h3>${item.name}</h3>
-        <p>${item.description}</p>
-        <p><strong>Price:</strong> $${item.price.toFixed(2)}</p>
-        <p><strong>Status:</strong> ${item.available ? '<span style="color:green;">Available</span>' : '<span style="color:red;">Unavailable</span>'}</p>
-        ${item.available ? `
-          <label>Quantity: <input type="number" id="qty-${item.id}" value="1" min="1" style="width: 60px;"></label><br>
-          <label>Special Notes: <input type="text" id="note-${item.id}" placeholder="Optional" style="width: 90%;"></label><br><br>
-          <button onclick="addToCart(${item.id}, '${item.name.replace(/'/g, "\\'")}')">Add to Cart</button>
-        ` : ''}
-      `;
+        card.innerHTML = `
+            <h3>${item.name}</h3>
+            <img src="http://localhost:8090/${item.imageUrl}" alt="${item.name}" class="menu-image">
+            <p class="desc">${item.description}</p>
+            <p class="price">$${item.price.toFixed(2)}</p>
+            <p class="status ${item.available ? "green" : "red"}">
+                ${item.available ? "Available" : "Unavailable"}
+            </p>
 
-      container.appendChild(card);
+            ${item.available ? `
+                <input type="number" id="qty-${item.id}" min="1" value="1" class="input-field">
+                <input type="text" id="note-${item.id}" placeholder="Special notes" class="input-field">
+                <button class="add-btn" onclick="addToCart(${item.id}, '${item.name.replace(/'/g, "\\'")}')">Add to Cart</button>
+            ` : ""}
+        `;
+        container.appendChild(card);
     });
-  }
+}
 
-  function addToCart(menuItemId, name) {
-    const qty = parseInt(document.getElementById(`qty-${menuItemId}`).value);
-    const notes = document.getElementById(`note-${menuItemId}`).value;
+        function searchMenu() {
+            const term = document.getElementById("search").value.toLowerCase();
+            displayMenuItems(allMenuItems.filter(i => i.name.toLowerCase().includes(term)));
+        }
 
-    if (!qty || qty <= 0) {
-      alert("Quantity must be at least 1.");
-      return;
-    }
+        function filterByCategory() {
+            const cat = document.getElementById("category-filter").value;
+            if (cat === "all") displayMenuItems(allMenuItems);
+            else displayMenuItems(allMenuItems.filter(i => i.category === cat));
+        }
 
-    const item = {
-      menuItemId,
-      name,
-      quantity: qty,
-      specialNotes: notes
-    };
+        function addToCart(id, name) {
+            const qty = parseInt(document.getElementById(`qty-${id}`).value);
+            const note = document.getElementById(`note-${id}`).value;
 
-    cart.push(item);
-    alert(`Added ${qty} x ${name} to cart.`);
-  }
+            if (qty < 1) return alert("Quantity must be at least 1");
 
-  async function placeOrder() {
-    if (cart.length === 0) {
-      alert("Cart is empty. Please add items first.");
-      return;
-    }
+            cart.push({ menuItemId: id, name, quantity: qty, specialNotes: note });
+            updateCartDisplay();
+            alert(`${qty} × ${name} added`);
+        }
 
-    const payload = {
-      customerId: user.id,
-      items: cart.map(i => ({
-        menuItemId: i.menuItemId,
-        quantity: i.quantity,
-        specialNotes: i.specialNotes
-      }))
-    };
+        function updateCartDisplay() {
+            const div = document.getElementById("cart-items");
+            div.innerHTML = "";
 
-    const response = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+            if (cart.length === 0) {
+                div.innerHTML = "<p>Your cart is empty.</p>";
+                return;
+            }
 
-    if (response.ok) {
-      alert("Order placed successfully!");
-      cart.length = 0;
-      window.location.href = "orders.html";
-    } else {
-      const error = await response.text();
-      alert("Failed to place order: " + error);
-    }
-  }
+            cart.forEach((i, index) => {
+                const row = document.createElement("div");
+                row.className = "cart-item";
 
-  loadMenu();
+                row.innerHTML = `
+                    <span>${i.quantity} × ${i.name}</span>
+                    <button class="remove-btn" onclick="removeFromCart(${index})">X</button>
+                `;
+
+                div.appendChild(row);
+            });
+        }
+
+        function removeFromCart(i) {
+            cart.splice(i, 1);
+            updateCartDisplay();
+        }
+
+        function placeOrder() {
+            if (cart.length === 0) return alert("Cart is empty");
+
+            const payload = {
+                customerId: user.id,
+                items: cart.map(i => ({
+                    menuItemId: i.menuItemId,
+                    quantity: i.quantity,
+                    specialNotes: i.specialNotes
+                }))
+            };
+
+            sessionStorage.setItem("pendingOrder", JSON.stringify(payload));
+            console.log(JSON.stringify(payload));
+            window.location.href = "payment.html";
+        }
+
+        loadMenu();
+
 </script>
+<style>
 
+    .menu-image {
+      width: 100px;
+      height: auto;
+      border: 1px solid #ddd;
+      padding: 2px;
+      margin-bottom: 10px;
+    }
+
+    .menu-card {
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin: 10px;
+      text-align: center;
+      background-color: #f9f9f9;
+    }
+
+    .menu-card h3 {
+      font-size: 1.2rem;
+    }
+
+    .menu-card .desc {
+      font-size: 1rem;
+      color: #555;
+    }
+
+    .menu-card .price {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+</style>
 </body>
 </html>

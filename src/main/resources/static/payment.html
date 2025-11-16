@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment</title>
+    <script src="bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .box {
+            width: 420px;
+            margin: 20px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: left;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .payment-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .payment-option:hover { background: #f3f4f6; }
+
+        .card-section, .address-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .card-section input,
+        .address-section input {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+        }
+
+        .total-line {
+            font-weight: bold;
+            margin-top: 8px;
+            border-top: 1px solid #ddd;
+            padding-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="sidebar">
+    <h4>Hotel System</h4>
+    <div id="sidebar-menu"></div>
+
+    <div class="mt-4">
+        <a href="#">Logged in as: <span id="usernameLabel"></span></a>
+        <a href="#" onclick="logout()">Logout</a>
+    </div>
+</div>
+
+<div class="main-content">
+
+    <h2>Payment</h2>
+
+    <div class="box">
+        <h3><b>Make Payment</b></h3>
+
+        <div id="order-summary"></div>
+
+        <div class="total-line">Subtotal: $<span id="subtotal"></span></div>
+        <div class="total-line">Tax (5%): $<span id="tax"></span></div>
+        <div class="total-line">Grand Total: $<span id="grandTotal"></span></div>
+
+        <div class="address-section">
+            <h4>Delivery Address</h4>
+            <input type="text" id="addrName" placeholder="Full Name *">
+            <input type="text" id="addrPhone" placeholder="Phone Number *">
+            <input type="text" id="addrLine1" placeholder="Address Line 1 *">
+            <input type="text" id="addrLine2" placeholder="Address Line 2 (optional)">
+            <input type="text" id="addrCity" placeholder="City *">
+            <input type="text" id="addrZip" placeholder="Zip Code *">
+        </div>
+
+        <label class="payment-option">
+            <input type="radio" name="payment" value="Card" onclick="toggleCardSection()"> Card
+        </label>
+
+        <label class="payment-option">
+            <input type="radio" name="payment" value="Cash" onclick="toggleCardSection()"> Pay on Delivery
+        </label>
+
+        <div id="cardDetails" class="card-section" style="display:none;">
+            <h4>Card Details</h4>
+            <input type="text" id="cardNumber" placeholder="Card Number">
+            <input type="text" id="cardName" placeholder="Name on Card">
+            <input type="text" id="expiry" placeholder="Expiry (MM/YY)">
+            <input type="password" id="cvv" placeholder="CVV">
+        </div>
+
+        <button onclick="confirmPayment()">Confirm Payment</button>
+    </div>
+
+</div>
+
+<script>
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || !user.id) {
+        alert("Please login first.");
+        window.location.href = "login.html";
+    }
+    document.getElementById("usernameLabel").textContent = user.username;
+
+    function buildSidebar() {
+        const sidebar = document.getElementById("sidebar-menu");
+        if (user.role === "CUSTOMER") {
+            sidebar.innerHTML = `
+                <a href="browse-menu.html">Browse Menu</a>
+                <a href="orders.html">My Orders</a>
+                <a class="active" href="payment.html">Payment</a>`;
+        }
+    }
+    buildSidebar();
+
+    let menuDetails = {};
+
+    async function loadMenuPrices() {
+        const res = await fetch("/api/menu");
+        const data = await res.json();
+
+        data.forEach(m => menuDetails[m.id] = { name: m.name, price: m.price });
+        loadOrderSummary();
+    }
+
+    function loadOrderSummary() {
+        const orderData = JSON.parse(sessionStorage.getItem("pendingOrder"));
+        const container = document.getElementById("order-summary");
+        container.innerHTML = "";
+
+        let subtotal = 0;
+
+        orderData.items.forEach(i => {
+            const item = menuDetails[i.menuItemId];
+            const total = item.price * i.quantity;
+            subtotal += total;
+
+            const row = document.createElement("div");
+            row.className = "summary-item";
+            row.innerHTML = `<span>${i.quantity} × ${item.name}</span><span>$${total.toFixed(2)}</span>`;
+            container.appendChild(row);
+        });
+
+        const tax = subtotal * 0.05;
+        const grand = subtotal + tax;
+
+        document.getElementById("subtotal").textContent = subtotal.toFixed(2);
+        document.getElementById("tax").textContent = tax.toFixed(2);
+        document.getElementById("grandTotal").textContent = grand.toFixed(2);
+
+        orderData.totalAmount = grand;
+        sessionStorage.setItem("pendingOrder", JSON.stringify(orderData));
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+
+    function toggleCardSection() {
+        const selected = document.querySelector('input[name="payment"]:checked').value;
+        document.getElementById("cardDetails").style.display =
+            selected === "Card" ? "block" : "none";
+    }
+
+    function validateAddress() {
+        const name = document.getElementById("addrName").value.trim();
+        const phone = document.getElementById("addrPhone").value.trim();
+        const line1 = document.getElementById("addrLine1").value.trim();
+        const city = document.getElementById("addrCity").value.trim();
+        const zip = document.getElementById("addrZip").value.trim();
+
+        if (!name || !phone || !line1 || !city || !zip) {
+            alert("Please fill all mandatory address fields.");
+            return false;
+        }
+
+        if (!/^[0-9]{10}$/.test(phone)) {
+            alert("Phone must be 10 digits.");
+            return false;
+        }
+
+        if (!/^[0-9]{5,6}$/.test(zip)) {
+            alert("ZIP Code must be 5–6 digits.");
+            return false;
+        }
+
+        return true;
+    }
+
+    function confirmPayment() {
+        const selected = document.querySelector('input[name="payment"]:checked');
+        if (!selected) return alert("Select a payment method.");
+
+        if (!validateAddress()) return;
+
+        if (selected.value === "Card") {
+            const cardNumber = document.getElementById("cardNumber").value;
+            const cardName = document.getElementById("cardName").value;
+            const expiry = document.getElementById("expiry").value;
+            const cvv = document.getElementById("cvv").value;
+
+            if (!/^[0-9]{12}$/.test(cardNumber)) return alert("Card number must be 12 digits.");
+            if (!/^[A-Za-z ]+$/.test(cardName)) return alert("Name must be letters only.");
+            if (!/^(0[1-9]|1[0-2])\/[0-9]{2}$/.test(expiry)) return alert("Invalid expiry.");
+            if (!/^[0-9]{3}$/.test(cvv)) return alert("CVV must be 3 digits.");
+        }
+
+        fetch("/api/payment/pay", {
+            method: "POST",
+            headers: { "Content-Type":"application/json" },
+            body: JSON.stringify({ method: selected.value, status: "SUCCESS" })
+        }).then(() => finalizeOrder());
+    }
+
+    function finalizeOrder() {
+        let orderData = JSON.parse(sessionStorage.getItem("pendingOrder"));
+        let subtotal = 0;
+
+        orderData.items = orderData.items.map(i => {
+            const menu = menuDetails[i.menuItemId];
+            const price = menu.price;
+            const lineTotal = price * i.quantity;
+            subtotal += lineTotal;
+
+            return {
+                menuItemId: i.menuItemId,
+                name: menu.name,
+                quantity: i.quantity,
+                specialNotes: i.specialNotes || "",
+                price: Number(price.toFixed(2)),
+                lineTotal: Number(lineTotal.toFixed(2))
+            };
+        });
+
+        const tax = subtotal * 0.05;
+        const grand = subtotal + tax;
+
+        orderData.address = {
+            fullName: document.getElementById("addrName").value.trim(),
+            phone: document.getElementById("addrPhone").value.trim(),
+            addressLine1: document.getElementById("addrLine1").value.trim(),
+            addressLine2: document.getElementById("addrLine2").value.trim(),
+            city: document.getElementById("addrCity").value.trim(),
+            zipCode: document.getElementById("addrZip").value.trim()
+        };
+
+        orderData.subTotal = Number(subtotal.toFixed(2));
+        orderData.taxAmount = Number(tax.toFixed(2));
+        orderData.totalAmount = Number(grand.toFixed(2));
+
+        fetch("/api/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(orderData)
+        }).then(r => {
+            if (r.ok) {
+                alert("Payment Success! Order placed.");
+                sessionStorage.removeItem("pendingOrder");
+                window.location.href = "orders.html";
+            } else {
+                alert("Order failed.");
+            }
+        });
+    }
+
+    loadMenuPrices();
+</script>
+
+</body>
+</html>

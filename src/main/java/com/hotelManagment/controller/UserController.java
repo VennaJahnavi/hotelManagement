@@ -43,6 +43,7 @@ public class UserController {
             List<User> users = userService.findUsersByRole(role);
             return ResponseEntity.ok(users);
         }
-        return ResponseEntity.badRequest().build(); // or return all users if needed
+        return ResponseEntity.badRequest().build();
     }
+
 }

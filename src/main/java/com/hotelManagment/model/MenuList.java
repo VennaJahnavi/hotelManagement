@@ -13,4 +13,6 @@ public class MenuList {
     private String description;
     private double price;
     private boolean isAvailable;
+    private String category;
+    private String imageUrl;
 }

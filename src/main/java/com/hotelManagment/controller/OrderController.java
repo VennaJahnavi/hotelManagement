@@ -2,14 +2,13 @@ package com.hotelManagment.controller;
 
 import com.hotelManagment.model.Order;
 import com.hotelManagment.model.OrderRequest;
-import com.hotelManagment.model.User;
 import com.hotelManagment.service.OrderService;
-import com.hotelManagment.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -57,4 +56,21 @@ public class OrderController {
         return ResponseEntity.ok(orders);
     }
 
+    @PostMapping("/cancel/{orderId}")
+    public ResponseEntity<?> cancelOrder(@PathVariable Integer orderId) {
+
+        boolean cancelled = orderService.cancelOrder(orderId);
+
+        if (!cancelled) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Order cannot be cancelled or not found."));
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Order successfully cancelled."));
+    }
+
+    @GetMapping("/report/sales")
+    public ResponseEntity<?> getSalesReport() {
+        return ResponseEntity.ok(orderService.getSalesReport());
+    }
 }

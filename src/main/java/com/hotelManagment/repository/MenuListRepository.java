@@ -13,13 +13,16 @@ public class MenuListRepository {
     private JdbcTemplate jdbcTemplate;
 
     public List<MenuList> getAllAvailableMenuItems() {
-        String sql = "SELECT * FROM menu_items WHERE is_available = 1";
+        String sql = "SELECT * FROM menu_items WHERE is_available = 1 ORDER BY category, display_order, name";
         return jdbcTemplate.query(sql, (rs, rowNum) -> new MenuList(
                 rs.getInt("id"),
                 rs.getString("name"),
                 rs.getString("description"),
                 rs.getDouble("price"),
-                rs.getInt("is_available") == 1
+                rs.getInt("is_available") == 1,
+                rs.getString("category"),
+                rs.getString("image_url") // NEW: fetch image URL
         ));
     }
+
 }
