@@ -198,29 +198,40 @@
     }
 
     function validateAddress() {
-        const name = document.getElementById("addrName").value.trim();
-        const phone = document.getElementById("addrPhone").value.trim();
-        const line1 = document.getElementById("addrLine1").value.trim();
-        const city = document.getElementById("addrCity").value.trim();
-        const zip = document.getElementById("addrZip").value.trim();
+    const name = document.getElementById("addrName").value.trim();
+    const phone = document.getElementById("addrPhone").value.trim();
+    const line1 = document.getElementById("addrLine1").value.trim();
+    const city = document.getElementById("addrCity").value.trim();
+    const zip = document.getElementById("addrZip").value.trim();
 
-        if (!name || !phone || !line1 || !city || !zip) {
-            alert("Please fill all mandatory address fields.");
-            return false;
-        }
-
-        if (!/^[0-9]{10}$/.test(phone)) {
-            alert("Phone must be 10 digits.");
-            return false;
-        }
-
-        if (!/^[0-9]{5,6}$/.test(zip)) {
-            alert("ZIP Code must be 5–6 digits.");
-            return false;
-        }
-
-        return true;
+    if (!name || !phone || !line1 || !city || !zip) {
+        alert("Please fill all mandatory address fields.");
+        return false;
     }
+
+    // US Phone validation
+    const phoneRegex = /^(\+1\s?)?(\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}$/;
+    if (!phoneRegex.test(phone)) {
+        alert("Enter a valid U.S. phone number (e.g., 123-456-7890).");
+        return false;
+    }
+
+    // US ZIP Code: 5 digits or ZIP+4
+    const zipRegex = /^\d{5}(-\d{4})?$/;
+    if (!zipRegex.test(zip)) {
+        alert("ZIP Code must be 5 digits or ZIP+4 (e.g., 12345 or 12345-6789).");
+        return false;
+    }
+
+    // Name validation – allow alphabets, space, apostrophe, hyphen
+    const nameRegex = /^[A-Za-z\s'-]+$/;
+    if (!nameRegex.test(name)) {
+        alert("Name can contain only alphabets, spaces, hyphens, and apostrophes.");
+        return false;
+    }
+
+    return true;
+}
 
     function confirmPayment() {
         const selected = document.querySelector('input[name="payment"]:checked');
